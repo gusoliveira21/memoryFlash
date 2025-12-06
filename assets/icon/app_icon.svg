@@ -1,0 +1,14 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="512" height="512" rx="102" fill="#6750A4"/>
+  
+  <!-- Flashcard -->
+  <rect x="128" y="96" width="256" height="320" rx="24" fill="#EADDFF" stroke="#21005D" stroke-width="8"/>
+  
+  <!-- Question mark on front -->
+  <text x="256" y="240" font-family="Arial, sans-serif" font-size="120" font-weight="bold" fill="#21005D" text-anchor="middle">?</text>
+  
+  <!-- Flip indicator -->
+  <path d="M 200 360 L 256 400 L 312 360" stroke="#21005D" stroke-width="12" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+
