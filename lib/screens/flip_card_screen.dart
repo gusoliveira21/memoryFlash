@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:path/path.dart' as path;
 import '../models/csv_file.dart';
 import '../models/flashcard.dart';
 import '../services/flashcard_service.dart';
@@ -120,7 +121,7 @@ class _FlipCardScreenState extends State<FlipCardScreen>
             crossAxisAlignment: CrossAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(widget.csvFile.name),
+              Text(path.basenameWithoutExtension(widget.csvFile.name)),
               if (!_isLoading && _flashcards.isNotEmpty)
                 Text(
                   '${_currentIndex + 1} / ${_flashcards.length}',
