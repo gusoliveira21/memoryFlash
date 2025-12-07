@@ -65,16 +65,18 @@ class _ListScreenState extends State<ListScreen> {
     if (Platform.isAndroid) {
       final androidInfo = await Permission.storage.status;
 
-      if (!androidInfo.isGranted) {
+      if (!androidInfo.isGranted && !androidInfo.isPermanentlyDenied) {
         final result = await Permission.storage.request();
 
         if (result.isDenied && mounted) {
           _showPermissionDialog();
         }
+      } else if (androidInfo.isPermanentlyDenied && mounted) {
+        _showPermissionDialog();
       }
 
       final photosStatus = await Permission.photos.status;
-      if (!photosStatus.isGranted) {
+      if (!photosStatus.isGranted && !photosStatus.isPermanentlyDenied) {
         await Permission.photos.request();
       }
     }
@@ -181,9 +183,14 @@ class _ListScreenState extends State<ListScreen> {
           });
 
           if (mounted) {
+            final fileNameWithoutExtension = path.basenameWithoutExtension(
+              finalFileName,
+            );
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Arquivo $finalFileName importado com sucesso!'),
+                content: Text(
+                  'Arquivo $fileNameWithoutExtension importado com sucesso!',
+                ),
                 duration: const Duration(seconds: 2),
               ),
             );
@@ -230,11 +237,16 @@ class _ListScreenState extends State<ListScreen> {
       return;
     }
 
+    final fileNameWithoutExtension = path.basenameWithoutExtension(
+      csvFile.name,
+    );
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Excluir arquivo'),
-        content: Text('Deseja realmente excluir o arquivo "${csvFile.name}"?'),
+        content: Text(
+          'Deseja realmente excluir o arquivo "$fileNameWithoutExtension"?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -263,9 +275,14 @@ class _ListScreenState extends State<ListScreen> {
         });
 
         if (mounted) {
+          final fileNameWithoutExtension = path.basenameWithoutExtension(
+            csvFile.name,
+          );
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Arquivo ${csvFile.name} excluído com sucesso!'),
+              content: Text(
+                'Arquivo $fileNameWithoutExtension excluído com sucesso!',
+              ),
               duration: const Duration(seconds: 2),
             ),
           );
@@ -302,12 +319,15 @@ class _ListScreenState extends State<ListScreen> {
               padding: const EdgeInsets.all(16),
               itemBuilder: (context, index) {
                 final csvFile = _csvFiles[index];
+                final fileNameWithoutExtension = path.basenameWithoutExtension(
+                  csvFile.name,
+                );
                 return Card(
                   margin: const EdgeInsets.only(bottom: 12),
                   child: ListTile(
                     leading: const Icon(Icons.description),
                     title: Text(
-                      csvFile.name,
+                      fileNameWithoutExtension,
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     trailing: Row(
