@@ -30,72 +30,47 @@ jobs:
           echo "🔐 Verificando configuração dos secrets..."
           MISSING_SECRETS=0
           
-          if [ -z "${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}" ]; then
-            echo "❌ GCP_SERVICE_ACCOUNT_KEY: NÃO configurado"
-            MISSING_SECRETS=$((MISSING_SECRETS + 1))
-          else
-            echo "✅ GCP_SERVICE_ACCOUNT_KEY: configurado"
-          fi
+          declare -a REQUIRED_SECRETS=("GCP_SERVICE_ACCOUNT_KEY" "KEYSTORE_BASE64" "KEYSTORE_PASSWORD" "KEY_ALIAS" "KEY_PASSWORD")
           
-          if [ -z "${{ secrets.KEYSTORE_BASE64 }}" ]; then
-            echo "❌ KEYSTORE_BASE64: NÃO configurado"
-            MISSING_SECRETS=$((MISSING_SECRETS + 1))
-          else
-            echo "✅ KEYSTORE_BASE64: configurado"
-          fi
-          
-          if [ -z "${{ secrets.KEYSTORE_PASSWORD }}" ]; then
-            echo "❌ KEYSTORE_PASSWORD: NÃO configurado"
-            MISSING_SECRETS=$((MISSING_SECRETS + 1))
-          else
-            echo "✅ KEYSTORE_PASSWORD: configurado"
-          fi
-          
-          if [ -z "${{ secrets.KEY_ALIAS }}" ]; then
-            echo "❌ KEY_ALIAS: NÃO configurado"
-            MISSING_SECRETS=$((MISSING_SECRETS + 1))
-          else
-            echo "✅ KEY_ALIAS: configurado"
-          fi
-          
-          if [ -z "${{ secrets.KEY_PASSWORD }}" ]; then
-            echo "❌ KEY_PASSWORD: NÃO configurado"
-            MISSING_SECRETS=$((MISSING_SECRETS + 1))
-          else
-            echo "✅ KEY_PASSWORD: configurado"
-          fi
+          for secret in "${REQUIRED_SECRETS[@]}"; do
+            if [ -z "${!secret}" ]; then
+              echo "❌ $secret: NÃO configurado"
+              MISSING_SECRETS=$((MISSING_SECRETS + 1))
+            else
+              echo "✅ $secret: configurado"
+            fi
+          done
           
           if [ $MISSING_SECRETS -gt 0 ]; then
-            echo ""
-            echo "⚠️  Faltam $MISSING_SECRETS secret(s). Configure no GitHub: Settings → Secrets → Actions"
+            echo "⚠️ Faltam $MISSING_SECRETS secrets. Configure em Settings → Secrets → Actions"
             exit 1
           fi
-          
-          echo ""
-          echo "✅ Todos os secrets estão configurados!"
+        env:
+          GCP_SERVICE_ACCOUNT_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
       - name: Validar JSON do Service Account
         run: |
-          echo "🔍 Validando formato do JSON do Service Account..."
-          echo "${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}" > /tmp/service_account.json
+          echo "🔍 Validando formato do JSON..."
+          echo '${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}' > /tmp/service_account.json
           
-          if python3 -m json.tool /tmp/service_account.json > /dev/null 2>&1; then
-            echo "✅ JSON válido"
-            # Extrai informações básicas (sem expor dados sensíveis)
-            python3 << 'EOF'
-import json
-with open('/tmp/service_account.json') as f:
-    data = json.load(f)
-    print(f"✅ Project ID: {data.get('project_id', 'N/A')}")
-    print(f"✅ Client Email: {data.get('client_email', 'N/A')[:20]}...")
-            EOF
-          else
-            echo "❌ JSON inválido ou malformado"
-            exit 1
-          fi
-          rm /tmp/service_account.json
+          python3 - << 'EOF'
+          import json
+          import sys
+          try:
+              with open('/tmp/service_account.json') as f:
+                  data = json.load(f)
+                  print(f"✅ Project ID: {data.get('project_id', 'N/A')}")
+                  print(f"✅ Client Email: {data.get('client_email', 'N/A')[:30]}...")
+          except Exception as e:
+              print(f"❌ Erro no JSON: {e}")
+              sys.exit(1)
+          EOF
 
-      - name: Clean e Install dependencies
+      - name: Install dependencies
         run: |
           flutter clean
           flutter pub get
@@ -103,32 +78,22 @@ with open('/tmp/service_account.json') as f:
       - name: Setup Keystore
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/keystore.jks
-          echo "✅ Keystore criado"
 
       - name: Configure signing
         run: |
-          echo "storeFile=app/keystore.jks" >> android/key.properties
-          echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}" >> android/key.properties
-          echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> android/key.properties
-          echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> android/key.properties
-          echo "✅ Assinatura configurada"
+          cat <<EOF > android/key.properties
+          storeFile=app/keystore.jks
+          storePassword=${{ secrets.KEYSTORE_PASSWORD }}
+          keyAlias=${{ secrets.KEY_ALIAS }}
+          keyPassword=${{ secrets.KEY_PASSWORD }}
+          EOF
 
       - name: Build App Bundle
         run: |
-          echo "🔨 Construindo App Bundle..."
           flutter build appbundle --release
-          
-          if [ -f "build/app/outputs/bundle/release/app-release.aab" ]; then
-            echo "✅ App Bundle criado com sucesso!"
-            ls -lh build/app/outputs/bundle/release/app-release.aab
-          else
-            echo "❌ Erro: App Bundle não foi criado"
-            exit 1
-          fi
 
       - name: Testar Conexão com Google Play Console
         id: test_connection
-        continue-on-error: true
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonRaw: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
@@ -138,23 +103,11 @@ with open('/tmp/service_account.json') as f:
           status: completed
 
       - name: Resultado do Teste
+        if: always()
         run: |
           if [ "${{ steps.test_connection.outcome }}" == "success" ]; then
-            echo "🎉 ✅ CONEXÃO COM GOOGLE PLAY CONSOLE ESTABELECIDA COM SUCESSO!"
-            echo "✅ Autenticação funcionando"
-            echo "✅ Upload realizado com sucesso (track: internal)"
-            echo ""
-            echo "📱 O app foi publicado na track 'internal' do Google Play Console"
+            echo "🎉 CONEXÃO ESTABELECIDA COM SUCESSO!"
           else
-            echo "❌ Falha na conexão ou upload"
-            echo ""
-            echo "Possíveis causas:"
-            echo "1. Service Account sem permissões no Google Play Console"
-            echo "2. Package name incorreto (com.example.memoryflash)"
-            echo "3. App não criado no Google Play Console"
-            echo "4. JSON do Service Account inválido"
-            echo ""
-            echo "Verifique os logs acima para mais detalhes"
+            echo "❌ Falha no upload. Verifique as permissões da Conta de Serviço no Play Console."
             exit 1
           fi
-
