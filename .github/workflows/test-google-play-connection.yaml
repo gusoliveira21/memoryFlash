@@ -1,63 +1,108 @@
 name: Teste Conexão Google Play Console
-'on':
-  workflow_dispatch: null
+
+on:
+  workflow_dispatch:
   push:
     branches:
       - test-google-play
+
 jobs:
   test-google-play-connection:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
+          java-version: "17"
           distribution: temurin
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: stable
           flutter-version: 3.29.2
+
       - name: Verificar secrets obrigatórios
         env:
-          GCP_KEY: '${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}'
-          KS_B64: '${{ secrets.KEYSTORE_BASE64 }}'
-          KS_PASS: '${{ secrets.KEYSTORE_PASSWORD }}'
-          K_ALIAS: '${{ secrets.KEY_ALIAS }}'
-          K_PASS: '${{ secrets.KEY_PASSWORD }}'
-        run: "echo \"\U0001F510 Verificando configuração dos secrets...\"\nMISSING=0\n[ -z \"$GCP_KEY\" ] && echo \"❌ GCP_SERVICE_ACCOUNT_KEY: Faltando\" && MISSING=$((MISSING+1))\n[ -z \"$KS_B64\" ] && echo \"❌ KEYSTORE_BASE64: Faltando\" && MISSING=$((MISSING+1))\n[ -z \"$KS_PASS\" ] && echo \"❌ KEYSTORE_PASSWORD: Faltando\" && MISSING=$((MISSING+1))\n[ -z \"$K_ALIAS\" ] && echo \"❌ KEY_ALIAS: Faltando\" && MISSING=$((MISSING+1))\n[ -z \"$K_PASS\" ] && echo \"❌ KEY_PASSWORD: Faltando\" && MISSING=$((MISSING+1))\n\nif [ $MISSING -gt 0 ]; then\n  exit 1\nfi\necho \"✅ Todos os secrets estão presentes.\"\n"
+          GCP_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+          KS_B64: ${{ secrets.KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
+          K_ALIAS: ${{ secrets.KEY_ALIAS }}
+          K_PASS: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          echo "🔐 Verificando configuração dos secrets..."
+          MISSING=0
+
+          [ -z "$GCP_KEY" ] && echo "❌ GCP_SERVICE_ACCOUNT_KEY: Faltando" && MISSING=$((MISSING+1))
+          [ -z "$KS_B64" ] && echo "❌ KEYSTORE_BASE64: Faltando" && MISSING=$((MISSING+1))
+          [ -z "$KS_PASS" ] && echo "❌ KEYSTORE_PASSWORD: Faltando" && MISSING=$((MISSING+1))
+          [ -z "$K_ALIAS" ] && echo "❌ KEY_ALIAS: Faltando" && MISSING=$((MISSING+1))
+          [ -z "$K_PASS" ] && echo "❌ KEY_PASSWORD: Faltando" && MISSING=$((MISSING+1))
+
+          if [ "$MISSING" -gt 0 ]; then
+            exit 1
+          fi
+
+          echo "✅ Todos os secrets estão presentes."
+
       - name: Validar JSON
-        run: echo '${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}' | python3 -c "import json, sys; json.load(sys.stdin); print('✅ JSON Válido')"
+        env:
+          GCP_SERVICE_ACCOUNT_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          raw = os.environ["GCP_SERVICE_ACCOUNT_KEY"]
+          json.loads(raw)
+          print("✅ JSON válido")
+          PY
+
       - name: Install dependencies
         run: |
           flutter clean
           flutter pub get
+
       - name: Setup Keystore
-        run: >
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d >
-          android/app/keystore.jks
+        run: |
+          mkdir -p android/app
+          printf '%s' "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/keystore.jks
+
       - name: Configure signing
         run: |
-          cat <<EOF > android/key.properties
+          mkdir -p android
+          cat > android/key.properties <<EOF
           storeFile=app/keystore.jks
           storePassword=${{ secrets.KEYSTORE_PASSWORD }}
           keyAlias=${{ secrets.KEY_ALIAS }}
           keyPassword=${{ secrets.KEY_PASSWORD }}
           EOF
+
       - name: Build App Bundle
         run: |
           flutter build appbundle --release
+
       - name: Testar Conexão com Google Play Console
         id: test_connection
         uses: r0adkll/upload-google-play@v1
         with:
-          serviceAccountJsonRaw: '${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}'
+          serviceAccountJsonRaw: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
           packageName: com.example.memoryflash
           releaseFiles: build/app/outputs/bundle/release/app-release.aab
           track: internal
           status: completed
+
       - name: Resultado do Teste
         if: always()
-        run: "if [ \"${{ steps.test_connection.outcome }}\" == \"success\" ]; then\n  echo \"\U0001F389 CONEXÃO ESTABELECIDA COM SUCESSO!\"\nelse\n  echo \"❌ Falha no upload. Verifique permissões no Google Play Console.\"\n  exit 1\nfi\n"
+        run: |
+          OUTCOME="${{ steps.test_connection.outcome }}"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "🎉 CONEXÃO ESTABELECIDA COM SUCESSO!"
+          else
+            echo "❌ Falha no upload. Verifique permissões no Google Play Console."
+            exit 1
+          fi
