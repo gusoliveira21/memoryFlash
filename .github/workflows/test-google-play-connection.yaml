@@ -46,23 +46,8 @@ jobs:
           fi
           echo "✅ Todos os secrets estão presentes."
 
-      - name: Validar JSON do Service Account
-        run: |
-          echo "🔍 Validando formato do JSON..."
-          echo '${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}' > /tmp/service_account.json
-          
-          python3 - << 'EOF'
-          import json
-          import sys
-          try:
-              with open('/tmp/service_account.json') as f:
-                  data = json.load(f)
-                  print(f"✅ Project ID: {data.get('project_id', 'N/A')}")
-                  print(f"✅ Client Email: {data.get('client_email', 'N/A')[:30]}...")
-          except Exception as e:
-              print(f"❌ Erro no JSON: {e}")
-              sys.exit(1)
-          EOF
+      - name: Validar JSON Simplificado
+        run: echo '${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}' | jq .project_id
 
       - name: Install dependencies
         run: |
