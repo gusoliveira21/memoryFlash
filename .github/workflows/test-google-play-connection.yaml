@@ -28,8 +28,8 @@ jobs:
           K_ALIAS: '${{ secrets.KEY_ALIAS }}'
           K_PASS: '${{ secrets.KEY_PASSWORD }}'
         run: "echo \"\U0001F510 Verificando configuração dos secrets...\"\nMISSING=0\n[ -z \"$GCP_KEY\" ] && echo \"❌ GCP_SERVICE_ACCOUNT_KEY: Faltando\" && MISSING=$((MISSING+1))\n[ -z \"$KS_B64\" ] && echo \"❌ KEYSTORE_BASE64: Faltando\" && MISSING=$((MISSING+1))\n[ -z \"$KS_PASS\" ] && echo \"❌ KEYSTORE_PASSWORD: Faltando\" && MISSING=$((MISSING+1))\n[ -z \"$K_ALIAS\" ] && echo \"❌ KEY_ALIAS: Faltando\" && MISSING=$((MISSING+1))\n[ -z \"$K_PASS\" ] && echo \"❌ KEY_PASSWORD: Faltando\" && MISSING=$((MISSING+1))\n\nif [ $MISSING -gt 0 ]; then\n  exit 1\nfi\necho \"✅ Todos os secrets estão presentes.\"\n"
-      - name: Validar JSON Simplificado
-        run: 'echo ''${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}'' | jq .project_id'
+      - name: Validar JSON
+        run: echo '${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}' | python3 -c "import json, sys; json.load(sys.stdin); print('✅ JSON Válido')"
       - name: Install dependencies
         run: |
           flutter clean
