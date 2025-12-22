@@ -26,31 +26,25 @@ jobs:
           flutter-version: '3.29.2'
 
       - name: Verificar secrets obrigatórios
+        env:
+          GCP_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+          KS_B64: ${{ secrets.KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
+          K_ALIAS: ${{ secrets.KEY_ALIAS }}
+          K_PASS: ${{ secrets.KEY_PASSWORD }}
         run: |
           echo "🔐 Verificando configuração dos secrets..."
-          MISSING_SECRETS=0
+          MISSING=0
+          [ -z "$GCP_KEY" ] && echo "❌ GCP_SERVICE_ACCOUNT_KEY: Faltando" && MISSING=$((MISSING+1))
+          [ -z "$KS_B64" ] && echo "❌ KEYSTORE_BASE64: Faltando" && MISSING=$((MISSING+1))
+          [ -z "$KS_PASS" ] && echo "❌ KEYSTORE_PASSWORD: Faltando" && MISSING=$((MISSING+1))
+          [ -z "$K_ALIAS" ] && echo "❌ KEY_ALIAS: Faltando" && MISSING=$((MISSING+1))
+          [ -z "$K_PASS" ] && echo "❌ KEY_PASSWORD: Faltando" && MISSING=$((MISSING+1))
           
-          declare -a REQUIRED_SECRETS=("GCP_SERVICE_ACCOUNT_KEY" "KEYSTORE_BASE64" "KEYSTORE_PASSWORD" "KEY_ALIAS" "KEY_PASSWORD")
-          
-          for secret in "${REQUIRED_SECRETS[@]}"; do
-            if [ -z "${!secret}" ]; then
-              echo "❌ $secret: NÃO configurado"
-              MISSING_SECRETS=$((MISSING_SECRETS + 1))
-            else
-              echo "✅ $secret: configurado"
-            fi
-          done
-          
-          if [ $MISSING_SECRETS -gt 0 ]; then
-            echo "⚠️ Faltam $MISSING_SECRETS secrets. Configure em Settings → Secrets → Actions"
+          if [ $MISSING -gt 0 ]; then
             exit 1
           fi
-        env:
-          GCP_SERVICE_ACCOUNT_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          echo "✅ Todos os secrets estão presentes."
 
       - name: Validar JSON do Service Account
         run: |
@@ -108,6 +102,6 @@ jobs:
           if [ "${{ steps.test_connection.outcome }}" == "success" ]; then
             echo "🎉 CONEXÃO ESTABELECIDA COM SUCESSO!"
           else
-            echo "❌ Falha no upload. Verifique as permissões da Conta de Serviço no Play Console."
+            echo "❌ Falha no upload. Verifique permissões no Google Play Console."
             exit 1
           fi
