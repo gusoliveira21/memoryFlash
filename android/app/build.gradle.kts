@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -5,8 +8,15 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Carrega as propriedades da chave
+val keystorePropertiesFile = rootProject.file("key.properties")
+val keystoreProperties = Properties()
+if (keystorePropertiesFile.exists()) {
+    FileInputStream(keystorePropertiesFile).use { keystoreProperties.load(it) }
+}
+
 android {
-    namespace = "com.example.memoryflash"
+    namespace = "com.gusoliveira21.memoryflash"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -20,8 +30,7 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.memoryflash"
+        applicationId = "com.gusoliveira21.memoryflash"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
@@ -30,15 +39,74 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        create("release") {
+            keyAlias = keystoreProperties["keyAlias"] as String
+            keyPassword = keystoreProperties["keyPassword"] as String
+            storeFile = file(keystoreProperties["storeFile"] as String)
+            storePassword = keystoreProperties["storePassword"] as String
+        }
+    }
+
     buildTypes {
-        release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+        all {
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 }
 
 flutter {
     source = "../.."
+}
+
+// Assina AABs automaticamente após o build
+afterEvaluate {
+    tasks.named("bundleDebug")?.configure {
+        doLast {
+            val aabFile = file("${project.buildDir}/outputs/bundle/debug/app-debug.aab")
+            if (aabFile.exists()) {
+                exec {
+                    commandLine(
+                        "jarsigner", "-verbose", "-sigalg", "SHA256withRSA", "-digestalg", "SHA-256",
+                        "-keystore", keystoreProperties["storeFile"] as String,
+                        "-storepass", keystoreProperties["storePassword"] as String,
+                        "-keypass", keystoreProperties["keyPassword"] as String,
+                        aabFile.absolutePath, keystoreProperties["keyAlias"] as String
+                    )
+                }
+            }
+        }
+    }
+    tasks.named("bundleRelease")?.configure {
+        doLast {
+            val aabFile = file("${project.buildDir}/outputs/bundle/release/app-release.aab")
+            if (aabFile.exists()) {
+                exec {
+                    commandLine(
+                        "jarsigner", "-verbose", "-sigalg", "SHA256withRSA", "-digestalg", "SHA-256",
+                        "-keystore", keystoreProperties["storeFile"] as String,
+                        "-storepass", keystoreProperties["storePassword"] as String,
+                        "-keypass", keystoreProperties["keyPassword"] as String,
+                        aabFile.absolutePath, keystoreProperties["keyAlias"] as String
+                    )
+                }
+            }
+        }
+    }
+    tasks.named("bundleProfile")?.configure {
+        doLast {
+            val aabFile = file("${project.buildDir}/outputs/bundle/profile/app-profile.aab")
+            if (aabFile.exists()) {
+                exec {
+                    commandLine(
+                        "jarsigner", "-verbose", "-sigalg", "SHA256withRSA", "-digestalg", "SHA-256",
+                        "-keystore", keystoreProperties["storeFile"] as String,
+                        "-storepass", keystoreProperties["storePassword"] as String,
+                        "-keypass", keystoreProperties["keyPassword"] as String,
+                        aabFile.absolutePath, keystoreProperties["keyAlias"] as String
+                    )
+                }
+            }
+        }
+    }
 }
