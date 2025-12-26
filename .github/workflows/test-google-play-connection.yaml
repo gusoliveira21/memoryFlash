@@ -16,6 +16,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # --- NOVO STEP DE INFORMAÇÕES ---
+      - name: 📋 Informações da Execução
+        run: |
+          echo "🌿 Branch atual: ${{ github.ref_name }}"
+          PACKAGE_NAME=$(grep '^name:' pubspec.yaml | awk '{print $2}')
+          echo "📦 Nome do pacote (pubspec): $PACKAGE_NAME"
+          echo "🆔 App ID (Android): com.????.memoryflash" 
+      # --------------------------------
+
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
@@ -103,11 +112,12 @@ jobs:
       - name: Resultado do Teste
         if: always()
         run: |
+          echo "🌿 Branch executada: ${{ github.ref_name }}"
           OUTCOME="${{ steps.test_connection.outcome }}"
           echo "Outcome do step test_connection: $OUTCOME"
 
           if [ "$OUTCOME" = "success" ]; then
-            echo "🎉 CONEXÃO ESTABELECIDA COM SUCESSO!"
+            echo "🎉 CONEXÃO ESTABELECIDA COM SUCESSO PARA com.example.memoryflash!"
           elif [ "$OUTCOME" = "failure" ]; then
             echo "❌ Falha no upload. Verifique permissões no Google Play Console."
             exit 1
