@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
-import 'package:permission_handler/permission_handler.dart';
 import '../models/csv_file.dart';
 import 'flip_card_screen.dart';
 
@@ -20,7 +19,6 @@ class _ListScreenState extends State<ListScreen> {
   @override
   void initState() {
     super.initState();
-    _checkPermissions();
     _loadCachedFiles();
   }
 
@@ -59,53 +57,6 @@ class _ListScreenState extends State<ListScreen> {
     } catch (e) {
       debugPrint('Erro ao carregar arquivos do cache: $e');
     }
-  }
-
-  Future<void> _checkPermissions() async {
-    if (Platform.isAndroid) {
-      final androidInfo = await Permission.storage.status;
-
-      if (!androidInfo.isGranted && !androidInfo.isPermanentlyDenied) {
-        final result = await Permission.storage.request();
-
-        if (result.isDenied && mounted) {
-          _showPermissionDialog();
-        }
-      } else if (androidInfo.isPermanentlyDenied && mounted) {
-        _showPermissionDialog();
-      }
-
-      final photosStatus = await Permission.photos.status;
-      if (!photosStatus.isGranted && !photosStatus.isPermanentlyDenied) {
-        await Permission.photos.request();
-      }
-    }
-  }
-
-  void _showPermissionDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Permissão Necessária'),
-        content: const Text(
-          'O app precisa de permissão para acessar arquivos para importar CSVs. '
-          'Por favor, conceda a permissão nas configurações do app.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              openAppSettings();
-            },
-            child: const Text('Abrir Configurações'),
-          ),
-        ],
-      ),
-    );
   }
 
   Future<void> _addItem() async {
