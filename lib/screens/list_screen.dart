@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
@@ -261,54 +262,61 @@ class _ListScreenState extends State<ListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Arquivos CSV')),
-      body: SafeArea(
-        child: _csvFiles.isEmpty
-            ? const Center(child: Text('Nenhum arquivo CSV encontrado'))
-            : ListView.builder(
-              itemCount: _csvFiles.length,
-              padding: EdgeInsets.fromLTRB(
-                16,
-                16,
-                16,
-                16 + MediaQuery.of(context).padding.bottom,
-              ),
-              itemBuilder: (context, index) {
-                final csvFile = _csvFiles[index];
-                final fileNameWithoutExtension = path.basenameWithoutExtension(
-                  csvFile.name,
-                );
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: ListTile(
-                    leading: const Icon(Icons.description),
-                    title: Text(
-                      fileNameWithoutExtension,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (!csvFile.isAsset)
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline),
-                            color: Theme.of(context).colorScheme.error,
-                            onPressed: () => _deleteCsvFile(index),
-                            tooltip: 'Excluir arquivo',
-                          ),
-                        //const Icon(Icons.chevron_right),
-                      ],
-                    ),
-                    onTap: () => _openCsvFile(csvFile),
-                  ),
-                );
-              },
-            ),
+    final brightness = Theme.of(context).brightness;
+    final iconBrightness =
+        brightness == Brightness.dark ? Brightness.light : Brightness.dark;
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle(
+        statusBarIconBrightness: iconBrightness,
+        systemNavigationBarIconBrightness: iconBrightness,
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _addItem,
-        child: const Icon(Icons.add),
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Arquivos CSV')),
+        body: SafeArea(
+          child: _csvFiles.isEmpty
+              ? const Center(child: Text('Nenhum arquivo CSV encontrado'))
+              : ListView.builder(
+                  itemCount: _csvFiles.length,
+                  padding: EdgeInsets.fromLTRB(
+                    16,
+                    16,
+                    16,
+                    16 + MediaQuery.of(context).padding.bottom,
+                  ),
+                  itemBuilder: (context, index) {
+                    final csvFile = _csvFiles[index];
+                    final fileNameWithoutExtension =
+                        path.basenameWithoutExtension(csvFile.name);
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: ListTile(
+                        leading: const Icon(Icons.description),
+                        title: Text(
+                          fileNameWithoutExtension,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (!csvFile.isAsset)
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline),
+                                color: Theme.of(context).colorScheme.error,
+                                onPressed: () => _deleteCsvFile(index),
+                                tooltip: 'Excluir arquivo',
+                              ),
+                          ],
+                        ),
+                        onTap: () => _openCsvFile(csvFile),
+                      ),
+                    );
+                  },
+                ),
+        ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: _addItem,
+          child: const Icon(Icons.add),
+        ),
       ),
     );
   }

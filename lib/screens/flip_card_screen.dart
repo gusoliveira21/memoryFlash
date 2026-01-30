@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:path/path.dart' as path;
 import '../models/csv_file.dart';
 import '../models/flashcard.dart';
@@ -103,18 +104,26 @@ class _FlipCardScreenState extends State<FlipCardScreen>
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, result) {
-        if (!didPop) {
-          _onWillPop().then((shouldPop) {
-            if (shouldPop && context.mounted) {
-              Navigator.of(context).pop();
-            }
-          });
-        }
-      },
-      child: Scaffold(
+    final brightness = Theme.of(context).brightness;
+    final iconBrightness =
+        brightness == Brightness.dark ? Brightness.light : Brightness.dark;
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle(
+        statusBarIconBrightness: iconBrightness,
+        systemNavigationBarIconBrightness: iconBrightness,
+      ),
+      child: PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, result) {
+          if (!didPop) {
+            _onWillPop().then((shouldPop) {
+              if (shouldPop && context.mounted) {
+                Navigator.of(context).pop();
+              }
+            });
+          }
+        },
+        child: Scaffold(
         appBar: AppBar(
           centerTitle: true,
           title: Column(
@@ -294,8 +303,9 @@ class _FlipCardScreenState extends State<FlipCardScreen>
                   );
                 },
               ),
-        ),
-      ),
-    );
+        ),  // body: SafeArea
+      ),    // Scaffold
+      ),    // PopScope
+    );      // AnnotatedRegion
   }
 }
