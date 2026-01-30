@@ -130,9 +130,10 @@ class _FlipCardScreenState extends State<FlipCardScreen>
             ],
           ),
         ),
-        body: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : _error != null
+        body: SafeArea(
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : _error != null
             ? Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -293,6 +294,7 @@ class _FlipCardScreenState extends State<FlipCardScreen>
                   );
                 },
               ),
+        ),
       ),
     );
   }

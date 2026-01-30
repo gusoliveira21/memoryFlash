@@ -263,11 +263,17 @@ class _ListScreenState extends State<ListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Arquivos CSV')),
-      body: _csvFiles.isEmpty
-          ? const Center(child: Text('Nenhum arquivo CSV encontrado'))
-          : ListView.builder(
+      body: SafeArea(
+        child: _csvFiles.isEmpty
+            ? const Center(child: Text('Nenhum arquivo CSV encontrado'))
+            : ListView.builder(
               itemCount: _csvFiles.length,
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.fromLTRB(
+                16,
+                16,
+                16,
+                16 + MediaQuery.of(context).padding.bottom,
+              ),
               itemBuilder: (context, index) {
                 final csvFile = _csvFiles[index];
                 final fileNameWithoutExtension = path.basenameWithoutExtension(
@@ -299,6 +305,7 @@ class _ListScreenState extends State<ListScreen> {
                 );
               },
             ),
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: _addItem,
         child: const Icon(Icons.add),
