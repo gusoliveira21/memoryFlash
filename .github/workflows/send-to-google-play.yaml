@@ -16,14 +16,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # --- NOVO STEP DE INFORMAÇÕES ---
       - name: 📋 Informações da Execução
         run: |
           echo "🌿 Branch atual: ${{ github.ref_name }}"
           PACKAGE_NAME=$(grep '^name:' pubspec.yaml | awk '{print $2}')
           echo "📦 Nome do pacote (pubspec): $PACKAGE_NAME"
-          echo "🆔 App ID (Android): com.????.memoryflash" 
-      # --------------------------------
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -47,29 +44,13 @@ jobs:
         run: |
           echo "🔐 Verificando configuração dos secrets..."
           MISSING=0
-
           [ -z "$GCP_KEY" ] && echo "❌ GCP_SERVICE_ACCOUNT_KEY: Faltando" && MISSING=$((MISSING+1))
           [ -z "$KS_B64" ] && echo "❌ KEYSTORE_BASE64: Faltando" && MISSING=$((MISSING+1))
           [ -z "$KS_PASS" ] && echo "❌ KEYSTORE_PASSWORD: Faltando" && MISSING=$((MISSING+1))
           [ -z "$K_ALIAS" ] && echo "❌ KEY_ALIAS: Faltando" && MISSING=$((MISSING+1))
           [ -z "$K_PASS" ] && echo "❌ KEY_PASSWORD: Faltando" && MISSING=$((MISSING+1))
-
-          if [ "$MISSING" -gt 0 ]; then
-            exit 1
-          fi
-
+          if [ "$MISSING" -gt 0 ]; then exit 1; fi
           echo "✅ Todos os secrets estão presentes."
-
-      - name: Validar JSON
-        env:
-          GCP_SERVICE_ACCOUNT_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
-        run: |
-          python3 - <<'PY'
-          import json, os
-          raw = os.environ["GCP_SERVICE_ACCOUNT_KEY"]
-          json.loads(raw)
-          print("✅ JSON válido")
-          PY
 
       - name: Install dependencies
         run: |
@@ -79,13 +60,14 @@ jobs:
       - name: Setup Keystore
         run: |
           mkdir -p android/app
+          # Criamos o arquivo exatamente em android/app/keystore.jks
           printf '%s' "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/keystore.jks
 
       - name: Configure signing
         run: |
-          mkdir -p android
+          # O storeFile deve ser relativo à pasta 'android/app' durante o build do Gradle
           cat > android/key.properties <<EOF
-          storeFile=app/keystore.jks
+          storeFile=keystore.jks
           storePassword=${{ secrets.KEYSTORE_PASSWORD }}
           keyAlias=${{ secrets.KEY_ALIAS }}
           keyPassword=${{ secrets.KEY_PASSWORD }}
@@ -112,16 +94,10 @@ jobs:
       - name: Resultado do Teste
         if: always()
         run: |
-          echo "🌿 Branch executada: ${{ github.ref_name }}"
           OUTCOME="${{ steps.test_connection.outcome }}"
-          echo "Outcome do step test_connection: $OUTCOME"
-
           if [ "$OUTCOME" = "success" ]; then
-            echo "🎉 CONEXÃO ESTABELECIDA COM SUCESSO PARA com.example.memoryflash!"
-          elif [ "$OUTCOME" = "failure" ]; then
-            echo "❌ Falha no upload. Verifique permissões no Google Play Console."
-            exit 1
+            echo "🎉 CONEXÃO ESTABELECIDA COM SUCESSO!"
           else
-            echo "⚠️ Step de upload não foi executado (estado: $OUTCOME). Verifique os steps anteriores."
+            echo "❌ Falha no upload ou conexão."
             exit 1
           fi
