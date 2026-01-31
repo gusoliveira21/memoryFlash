@@ -2,7 +2,7 @@ name: Envia versao para Google Play Console
 
 on:
   workflow_dispatch:
-  pull_request:
+  push: # Alterado de pull_request para push (gatilho por commit)
     branches:
       - to_google_play
 
@@ -35,23 +35,22 @@ jobs:
 
       - name: Setup Keystore
         run: |
-          # Mantemos a geração dinâmica do arquivo JKS dentro de android/app
+          # Cria a pasta e gera o arquivo físico da keystore
           mkdir -p android/app
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/keystore.jks
 
       - name: Configure signing
         run: |
-          # Criamos o key.properties em android/ pois seu build.gradle.kts usa rootProject.file
-          # Definimos storeFile apenas como o nome do arquivo, pois ele será buscado dentro de android/app pelo Gradle
+          # Criamos o key.properties em /android/
+          # IMPORTANTE: Usamos o caminho absoluto para o runner não se perder entre o Gradle e o Jarsigner
           cat > android/key.properties <<EOF
-          storeFile=keystore.jks
+          storeFile=${{ github.workspace }}/android/app/keystore.jks
           storePassword=${{ secrets.KEYSTORE_PASSWORD }}
           keyAlias=${{ secrets.KEY_ALIAS }}
           keyPassword=${{ secrets.KEY_PASSWORD }}
           EOF
 
       - name: Build App Bundle
-        # Adicionado o build-number para evitar conflitos de versão no console
         run: flutter build appbundle --release --build-number=${{ github.run_number }}
 
       - name: Create Service Account JSON
@@ -65,7 +64,7 @@ jobs:
           packageName: com.gusoliveira21.memoryflash
           releaseFiles: build/app/outputs/bundle/release/app-release.aab
           track: internal
-          status: completed # Alterado de draft para completed conforme seu desejo de testar a conexão final
+          status: completed
 
       - name: Resultado do Teste
         if: always()
