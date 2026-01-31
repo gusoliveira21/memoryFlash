@@ -2,7 +2,7 @@ name: Envia versao para Google Play Console
 
 on:
   workflow_dispatch:
-  pull_request:
+  push: # Alterado de pull_request para push (gatilho por commit)
     branches:
       - to_google_play
 
@@ -42,32 +42,31 @@ jobs:
 
       - name: Setup Keystore
         run: |
-          # Criamos a keystore diretamente na pasta android/ para alinhar com o jarsigner
           mkdir -p android
           printf '%s' "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/keystore.jks
 
       - name: Configure signing
         run: |
-          # Criamos o key.properties na raiz da pasta android (rootProject)
-          # O storeFile aponta para 'keystore.jks' porque ambos estarão na mesma pasta (android/)
+          mkdir -p android/app
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/keystore.jks
+
+      - name: Configure signing
+        run: |
           cat > android/key.properties <<EOF
-          storeFile=keystore.jks
+          storeFile=${{ github.workspace }}/android/app/keystore.jks
           storePassword=${{ secrets.KEYSTORE_PASSWORD }}
           keyAlias=${{ secrets.KEY_ALIAS }}
           keyPassword=${{ secrets.KEY_PASSWORD }}
           EOF
 
       - name: Build App Bundle
-        run: |
-          # O Flutter build aciona o Gradle, que por sua vez lerá o key.properties e a keystore
-          flutter build appbundle --release
+        run: flutter build appbundle --release --build-number=${{ github.run_number }}
 
       - name: Create Service Account JSON
         run: echo '${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}' > android/service-account.json
 
-      - name: Testar Conexão com Google Play Console
+      - name: Testar Conexão e Upload
         id: test_connection
-        continue-on-error: true
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJson: android/service-account.json
@@ -79,10 +78,9 @@ jobs:
       - name: Resultado do Teste
         if: always()
         run: |
-          OUTCOME="${{ steps.test_connection.outcome }}"
-          if [ "$OUTCOME" = "success" ]; then
-            echo "🎉 CONEXÃO ESTABELECIDA COM SUCESSO!"
+          if [ "${{ steps.test_connection.outcome }}" = "success" ]; then
+            echo "🎉 CONEXÃO E UPLOAD REALIZADOS COM SUCESSO!"
           else
-            echo "❌ Falha no upload ou conexão. Verifique os logs do build acima."
+            echo "❌ Falha no processo. Verifique os logs acima."
             exit 1
           fi
