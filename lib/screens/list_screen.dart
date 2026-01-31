@@ -8,7 +8,14 @@ import '../models/csv_file.dart';
 import 'flip_card_screen.dart';
 
 class ListScreen extends StatefulWidget {
-  const ListScreen({super.key});
+  const ListScreen({
+    super.key,
+    required this.themeMode,
+    required this.onThemeModeChanged,
+  });
+
+  final ThemeMode themeMode;
+  final ValueChanged<ThemeMode> onThemeModeChanged;
 
   @override
   State<ListScreen> createState() => _ListScreenState();
@@ -260,6 +267,28 @@ class _ListScreenState extends State<ListScreen> {
     );
   }
 
+  List<PopupMenuEntry<ThemeMode>> _buildMenuItems() {
+    return [
+      PopupMenuItem<ThemeMode>(
+        enabled: false,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Modo noturno', style: Theme.of(context).textTheme.bodyLarge),
+            const SizedBox(width: 16),
+            Switch(
+              value: widget.themeMode == ThemeMode.dark,
+              onChanged: (value) {
+                widget.onThemeModeChanged(value ? ThemeMode.dark : ThemeMode.light);
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        ),
+      ),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     final brightness = Theme.of(context).brightness;
@@ -273,7 +302,17 @@ class _ListScreenState extends State<ListScreen> {
         systemNavigationBarIconBrightness: iconBrightness,
       ),
       child: Scaffold(
-        appBar: AppBar(title: const Text('Arquivos CSV')),
+        appBar: AppBar(
+          title: const Text('Arquivos CSV'),
+          actions: [
+            PopupMenuButton<ThemeMode>(
+              icon: const Icon(Icons.menu),
+              tooltip: 'Opções',
+              onSelected: (_) {},
+              itemBuilder: (context) => _buildMenuItems(),
+            ),
+          ],
+        ),
         body: SafeArea(
           child: _csvFiles.isEmpty
               ? const Center(child: Text('Nenhum arquivo CSV encontrado'))

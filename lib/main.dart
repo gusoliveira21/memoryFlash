@@ -1,14 +1,38 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'theme/app_theme.dart';
 import 'screens/list_screen.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const MyApp());
+  final prefs = await SharedPreferences.getInstance();
+  final isDark = prefs.getBool('theme_dark') ?? false;
+  runApp(MyApp(initialThemeDark: isDark));
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class MyApp extends StatefulWidget {
+  const MyApp({super.key, required this.initialThemeDark});
+
+  final bool initialThemeDark;
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  late ThemeMode _themeMode;
+
+  @override
+  void initState() {
+    super.initState();
+    _themeMode = widget.initialThemeDark ? ThemeMode.dark : ThemeMode.light;
+  }
+
+  void _setThemeMode(ThemeMode mode) async {
+    setState(() => _themeMode = mode);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('theme_dark', mode == ThemeMode.dark);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,8 +40,11 @@ class MyApp extends StatelessWidget {
       title: 'Memory Flash',
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system,
-      home: const ListScreen(),
+      themeMode: _themeMode,
+      home: ListScreen(
+        themeMode: _themeMode,
+        onThemeModeChanged: _setThemeMode,
+      ),
     );
   }
 }
