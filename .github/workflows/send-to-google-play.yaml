@@ -2,7 +2,7 @@ name: Envia versao para Google Play Console
 
 on:
   workflow_dispatch:
-  push:
+  pull_request:
     branches:
       - to-google-play
 
