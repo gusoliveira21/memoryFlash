@@ -1,4 +1,4 @@
-name: Teste Conexão Google Play Console
+name: Envia versao para Google Play Console
 
 on:
   workflow_dispatch:
