@@ -3,11 +3,31 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'theme/app_theme.dart';
 import 'screens/list_screen.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  final prefs = await SharedPreferences.getInstance();
-  final isDark = prefs.getBool('theme_dark') ?? false;
-  runApp(MyApp(initialThemeDark: isDark));
+  runApp(const ThemeLoaderApp());
+}
+
+class ThemeLoaderApp extends StatelessWidget {
+  const ThemeLoaderApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<bool>(
+      future: SharedPreferences.getInstance()
+          .then((prefs) => prefs.getBool('theme_dark') ?? false),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.done) {
+          return MyApp(initialThemeDark: snapshot.data ?? false);
+        }
+        return MaterialApp(
+          home: Scaffold(
+            body: Center(child: CircularProgressIndicator(color: AppTheme.lightTheme.colorScheme.primary)),
+          ),
+        );
+      },
+    );
+  }
 }
 
 class MyApp extends StatefulWidget {
