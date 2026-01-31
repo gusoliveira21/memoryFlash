@@ -36,3 +36,5 @@ osascript -e "display notification \"Iniciando o emulador: $AVD_NAME...\" with t
 # Executar o emulador
 emulator -avd "$AVD_NAME" &
 
+
+
