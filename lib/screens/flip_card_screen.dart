@@ -110,8 +110,6 @@ class _FlipCardScreenState extends State<FlipCardScreen>
         : Brightness.dark;
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        systemNavigationBarColor: Colors.transparent,
         statusBarIconBrightness: iconBrightness,
         systemNavigationBarIconBrightness: iconBrightness,
       ),

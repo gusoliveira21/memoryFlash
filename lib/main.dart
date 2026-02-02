@@ -14,15 +14,22 @@ class ThemeLoaderApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<bool>(
-      future: SharedPreferences.getInstance()
-          .then((prefs) => prefs.getBool('theme_dark') ?? false),
+      future: SharedPreferences.getInstance().then(
+        (prefs) => prefs.getBool('theme_dark') ?? false,
+      ),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.done) {
           return MyApp(initialThemeDark: snapshot.data ?? false);
         }
         return MaterialApp(
           home: Scaffold(
-            body: Center(child: CircularProgressIndicator(color: AppTheme.lightTheme.colorScheme.primary)),
+            body: SafeArea(
+              child: Center(
+                child: CircularProgressIndicator(
+                  color: AppTheme.lightTheme.colorScheme.primary,
+                ),
+              ),
+            ),
           ),
         );
       },

@@ -279,7 +279,9 @@ class _ListScreenState extends State<ListScreen> {
             Switch(
               value: widget.themeMode == ThemeMode.dark,
               onChanged: (value) {
-                widget.onThemeModeChanged(value ? ThemeMode.dark : ThemeMode.light);
+                widget.onThemeModeChanged(
+                  value ? ThemeMode.dark : ThemeMode.light,
+                );
                 Navigator.of(context).pop();
               },
             ),
@@ -292,12 +294,11 @@ class _ListScreenState extends State<ListScreen> {
   @override
   Widget build(BuildContext context) {
     final brightness = Theme.of(context).brightness;
-    final iconBrightness =
-        brightness == Brightness.dark ? Brightness.light : Brightness.dark;
+    final iconBrightness = brightness == Brightness.dark
+        ? Brightness.light
+        : Brightness.dark;
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        systemNavigationBarColor: Colors.transparent,
         statusBarIconBrightness: iconBrightness,
         systemNavigationBarIconBrightness: iconBrightness,
       ),
@@ -322,12 +323,13 @@ class _ListScreenState extends State<ListScreen> {
                     16,
                     16,
                     16,
+                    // Recuo manual para edge-to-edge (barra de navegação)
                     16 + MediaQuery.of(context).padding.bottom,
                   ),
                   itemBuilder: (context, index) {
                     final csvFile = _csvFiles[index];
-                    final fileNameWithoutExtension =
-                        path.basenameWithoutExtension(csvFile.name);
+                    final fileNameWithoutExtension = path
+                        .basenameWithoutExtension(csvFile.name);
                     return Card(
                       margin: const EdgeInsets.only(bottom: 12),
                       child: ListTile(
