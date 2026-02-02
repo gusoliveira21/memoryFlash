@@ -2,7 +2,7 @@ name: Envia versao para Google Play Console
 
 on:
   workflow_dispatch:
-  push:
+  pull_request: #push
     branches:
       - to_google_play
 
@@ -15,6 +15,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: 📋 Informações da Execução
+        run: |
+          echo "🌿 Branch atual: ${{ github.ref_name }}"
+          PACKAGE_NAME=$(grep '^name:' pubspec.yaml | awk '{print $2}')
+          echo "📦 Nome do pacote (pubspec): $PACKAGE_NAME"
+          echo "🆔 App ID (Android): com.gusoliveira21.memoryflash"
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -35,14 +42,16 @@ jobs:
 
       - name: Setup Keystore
         run: |
-          # Cria a pasta e gera o arquivo físico da keystore
+          mkdir -p android
+          printf '%s' "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/keystore.jks
+
+      - name: Configure signing
+        run: |
           mkdir -p android/app
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/keystore.jks
 
       - name: Configure signing
         run: |
-          # Criamos o key.properties em /android/
-          # IMPORTANTE: Usamos o caminho absoluto para o runner não se perder entre o Gradle e o Jarsigner
           cat > android/key.properties <<EOF
           storeFile=${{ github.workspace }}/android/app/keystore.jks
           storePassword=${{ secrets.KEYSTORE_PASSWORD }}
