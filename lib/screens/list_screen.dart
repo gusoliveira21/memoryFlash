@@ -299,8 +299,6 @@ class _ListScreenState extends State<ListScreen> {
         : Brightness.dark;
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        systemNavigationBarColor: Colors.transparent,
         statusBarIconBrightness: iconBrightness,
         systemNavigationBarIconBrightness: iconBrightness,
       ),

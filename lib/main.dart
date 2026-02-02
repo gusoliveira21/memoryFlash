@@ -1,19 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'theme/app_theme.dart';
 import 'screens/list_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  // Edge-to-edge: barras transparentes (Android 15+ ignora cores sólidas)
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      systemNavigationBarColor: Colors.transparent,
-      systemNavigationBarDividerColor: Colors.transparent,
-    ),
-  );
   runApp(const ThemeLoaderApp());
 }
 
