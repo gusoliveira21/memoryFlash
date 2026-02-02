@@ -1,10 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'theme/app_theme.dart';
 import 'screens/list_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  // Edge-to-edge: barras transparentes (Android 15+ ignora cores sólidas)
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      systemNavigationBarColor: Colors.transparent,
+      systemNavigationBarDividerColor: Colors.transparent,
+    ),
+  );
   runApp(const ThemeLoaderApp());
 }
 
@@ -14,15 +23,22 @@ class ThemeLoaderApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<bool>(
-      future: SharedPreferences.getInstance()
-          .then((prefs) => prefs.getBool('theme_dark') ?? false),
+      future: SharedPreferences.getInstance().then(
+        (prefs) => prefs.getBool('theme_dark') ?? false,
+      ),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.done) {
           return MyApp(initialThemeDark: snapshot.data ?? false);
         }
         return MaterialApp(
           home: Scaffold(
-            body: Center(child: CircularProgressIndicator(color: AppTheme.lightTheme.colorScheme.primary)),
+            body: SafeArea(
+              child: Center(
+                child: CircularProgressIndicator(
+                  color: AppTheme.lightTheme.colorScheme.primary,
+                ),
+              ),
+            ),
           ),
         );
       },
