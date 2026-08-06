@@ -1,14 +1,21 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
-import 'package:permission_handler/permission_handler.dart';
 import '../models/csv_file.dart';
 import 'flip_card_screen.dart';
 
 class ListScreen extends StatefulWidget {
-  const ListScreen({super.key});
+  const ListScreen({
+    super.key,
+    required this.themeMode,
+    required this.onThemeModeChanged,
+  });
+
+  final ThemeMode themeMode;
+  final ValueChanged<ThemeMode> onThemeModeChanged;
 
   @override
   State<ListScreen> createState() => _ListScreenState();
@@ -20,7 +27,6 @@ class _ListScreenState extends State<ListScreen> {
   @override
   void initState() {
     super.initState();
-    _checkPermissions();
     _loadCachedFiles();
   }
 
@@ -59,53 +65,6 @@ class _ListScreenState extends State<ListScreen> {
     } catch (e) {
       debugPrint('Erro ao carregar arquivos do cache: $e');
     }
-  }
-
-  Future<void> _checkPermissions() async {
-    if (Platform.isAndroid) {
-      final androidInfo = await Permission.storage.status;
-
-      if (!androidInfo.isGranted && !androidInfo.isPermanentlyDenied) {
-        final result = await Permission.storage.request();
-
-        if (result.isDenied && mounted) {
-          _showPermissionDialog();
-        }
-      } else if (androidInfo.isPermanentlyDenied && mounted) {
-        _showPermissionDialog();
-      }
-
-      final photosStatus = await Permission.photos.status;
-      if (!photosStatus.isGranted && !photosStatus.isPermanentlyDenied) {
-        await Permission.photos.request();
-      }
-    }
-  }
-
-  void _showPermissionDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Permissão Necessária'),
-        content: const Text(
-          'O app precisa de permissão para acessar arquivos para importar CSVs. '
-          'Por favor, conceda a permissão nas configurações do app.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              openAppSettings();
-            },
-            child: const Text('Abrir Configurações'),
-          ),
-        ],
-      ),
-    );
   }
 
   Future<void> _addItem() async {
@@ -308,49 +267,99 @@ class _ListScreenState extends State<ListScreen> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Arquivos CSV')),
-      body: _csvFiles.isEmpty
-          ? const Center(child: Text('Nenhum arquivo CSV encontrado'))
-          : ListView.builder(
-              itemCount: _csvFiles.length,
-              padding: const EdgeInsets.all(16),
-              itemBuilder: (context, index) {
-                final csvFile = _csvFiles[index];
-                final fileNameWithoutExtension = path.basenameWithoutExtension(
-                  csvFile.name,
+  List<PopupMenuEntry<ThemeMode>> _buildMenuItems() {
+    return [
+      PopupMenuItem<ThemeMode>(
+        enabled: false,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Modo noturno', style: Theme.of(context).textTheme.bodyLarge),
+            const SizedBox(width: 16),
+            Switch(
+              value: widget.themeMode == ThemeMode.dark,
+              onChanged: (value) {
+                widget.onThemeModeChanged(
+                  value ? ThemeMode.dark : ThemeMode.light,
                 );
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: ListTile(
-                    leading: const Icon(Icons.description),
-                    title: Text(
-                      fileNameWithoutExtension,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (!csvFile.isAsset)
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline),
-                            color: Theme.of(context).colorScheme.error,
-                            onPressed: () => _deleteCsvFile(index),
-                            tooltip: 'Excluir arquivo',
-                          ),
-                        //const Icon(Icons.chevron_right),
-                      ],
-                    ),
-                    onTap: () => _openCsvFile(csvFile),
-                  ),
-                );
+                Navigator.of(context).pop();
               },
             ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _addItem,
-        child: const Icon(Icons.add),
+          ],
+        ),
+      ),
+    ];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    final iconBrightness = brightness == Brightness.dark
+        ? Brightness.light
+        : Brightness.dark;
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle(
+        statusBarIconBrightness: iconBrightness,
+        systemNavigationBarIconBrightness: iconBrightness,
+      ),
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Arquivos CSV'),
+          actions: [
+            PopupMenuButton<ThemeMode>(
+              icon: const Icon(Icons.menu),
+              tooltip: 'Opções',
+              onSelected: (_) {},
+              itemBuilder: (context) => _buildMenuItems(),
+            ),
+          ],
+        ),
+        body: SafeArea(
+          child: _csvFiles.isEmpty
+              ? const Center(child: Text('Nenhum arquivo CSV encontrado'))
+              : ListView.builder(
+                  itemCount: _csvFiles.length,
+                  padding: EdgeInsets.fromLTRB(
+                    16,
+                    16,
+                    16,
+                    // Recuo manual para edge-to-edge (barra de navegação)
+                    16 + MediaQuery.of(context).padding.bottom,
+                  ),
+                  itemBuilder: (context, index) {
+                    final csvFile = _csvFiles[index];
+                    final fileNameWithoutExtension = path
+                        .basenameWithoutExtension(csvFile.name);
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: ListTile(
+                        leading: const Icon(Icons.description),
+                        title: Text(
+                          fileNameWithoutExtension,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (!csvFile.isAsset)
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline),
+                                color: Theme.of(context).colorScheme.error,
+                                onPressed: () => _deleteCsvFile(index),
+                                tooltip: 'Excluir arquivo',
+                              ),
+                          ],
+                        ),
+                        onTap: () => _openCsvFile(csvFile),
+                      ),
+                    );
+                  },
+                ),
+        ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: _addItem,
+          child: const Icon(Icons.add),
+        ),
       ),
     );
   }
