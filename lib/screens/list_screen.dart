@@ -5,6 +5,11 @@ import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import '../models/csv_file.dart';
+import '../models/deck.dart';
+import '../services/deck_service.dart';
+import 'create_deck_screen.dart';
+import 'ai_prompt_screen.dart';
+import 'paste_csv_screen.dart';
 import 'flip_card_screen.dart';
 
 class ListScreen extends StatefulWidget {
@@ -23,6 +28,7 @@ class ListScreen extends StatefulWidget {
 
 class _ListScreenState extends State<ListScreen> {
   final List<CsvFile> _csvFiles = [];
+  final List<Deck> _decks = [];
 
   @override
   void initState() {
@@ -32,6 +38,14 @@ class _ListScreenState extends State<ListScreen> {
 
   Future<void> _loadCachedFiles() async {
     try {
+      final decks = await DeckService.getDecks();
+      if (mounted) {
+        setState(() {
+          _decks.clear();
+          _decks.addAll(decks);
+        });
+      }
+
       final cacheDir = await getTemporaryDirectory();
       final csvDir = Directory(path.join(cacheDir.path, 'csv_files'));
 
@@ -267,6 +281,133 @@ class _ListScreenState extends State<ListScreen> {
     );
   }
 
+  void _openDeck(Deck deck) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => FlipCardScreen(deck: deck)),
+    );
+  }
+
+  Future<void> _editDeck(Deck deck) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CreateDeckScreen(deckToEdit: deck),
+      ),
+    );
+    if (result == true) {
+      _loadCachedFiles();
+    }
+  }
+
+  Future<void> _deleteDeck(int index) async {
+    final deck = _decks[index];
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Excluir baralho'),
+        content: Text('Deseja realmente excluir o baralho "${deck.name}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await DeckService.deleteDeck(deck.id);
+      _loadCachedFiles();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Baralho ${deck.name} excluído!')),
+        );
+      }
+    }
+  }
+
+  void _showAddOptions() {
+    showModalBottomSheet(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.create),
+              title: const Text('Criar Novo Baralho'),
+              onTap: () async {
+                Navigator.pop(sheetContext);
+                if (!mounted) return;
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const CreateDeckScreen()),
+                );
+                if (result == true) {
+                  _loadCachedFiles();
+                }
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.file_download),
+              title: const Text('Importar CSV'),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                _addItem();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.paste),
+              title: const Text('Colar texto CSV'),
+              onTap: () async {
+                Navigator.pop(sheetContext);
+                if (!mounted) return;
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const PasteCsvScreen()),
+                );
+                if (result == true) {
+                  _loadCachedFiles();
+                }
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.auto_awesome, color: Colors.amber),
+              title: const Text('Gerar com IA'),
+              onTap: () async {
+                Navigator.pop(sheetContext);
+                if (!mounted) return;
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AiPromptScreen()),
+                );
+                if (!mounted) return;
+                if (result == 'import_csv') {
+                  _addItem();
+                } else if (result == 'paste_csv') {
+                  final pasteResult = await Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const PasteCsvScreen()),
+                  );
+                  if (pasteResult == true) {
+                    _loadCachedFiles();
+                  }
+                }
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   List<PopupMenuEntry<ThemeMode>> _buildMenuItems() {
     return [
       PopupMenuItem<ThemeMode>(
@@ -315,10 +456,10 @@ class _ListScreenState extends State<ListScreen> {
           ],
         ),
         body: SafeArea(
-          child: _csvFiles.isEmpty
-              ? const Center(child: Text('Nenhum arquivo CSV encontrado'))
+          child: _csvFiles.isEmpty && _decks.isEmpty
+              ? const Center(child: Text('Nenhum baralho encontrado'))
               : ListView.builder(
-                  itemCount: _csvFiles.length,
+                  itemCount: _csvFiles.length + _decks.length,
                   padding: EdgeInsets.fromLTRB(
                     16,
                     16,
@@ -327,37 +468,69 @@ class _ListScreenState extends State<ListScreen> {
                     16 + MediaQuery.of(context).padding.bottom,
                   ),
                   itemBuilder: (context, index) {
-                    final csvFile = _csvFiles[index];
-                    final fileNameWithoutExtension = path
-                        .basenameWithoutExtension(csvFile.name);
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      child: ListTile(
-                        leading: const Icon(Icons.description),
-                        title: Text(
-                          fileNameWithoutExtension,
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (!csvFile.isAsset)
+                    if (index < _decks.length) {
+                      final deck = _decks[index];
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        child: ListTile(
+                          leading: const Icon(Icons.style),
+                          title: Text(
+                            deck.name,
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.edit_outlined),
+                                onPressed: () => _editDeck(deck),
+                                tooltip: 'Editar baralho',
+                              ),
                               IconButton(
                                 icon: const Icon(Icons.delete_outline),
                                 color: Theme.of(context).colorScheme.error,
-                                onPressed: () => _deleteCsvFile(index),
-                                tooltip: 'Excluir arquivo',
+                                onPressed: () => _deleteDeck(index),
+                                tooltip: 'Excluir baralho',
                               ),
-                          ],
+                            ],
+                          ),
+                          onTap: () => _openDeck(deck),
                         ),
-                        onTap: () => _openCsvFile(csvFile),
-                      ),
-                    );
+                      );
+                    } else {
+                      final csvIndex = index - _decks.length;
+                      final csvFile = _csvFiles[csvIndex];
+                      final fileNameWithoutExtension = path
+                          .basenameWithoutExtension(csvFile.name);
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        child: ListTile(
+                          leading: const Icon(Icons.description),
+                          title: Text(
+                            fileNameWithoutExtension,
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (!csvFile.isAsset)
+                                IconButton(
+                                  icon: const Icon(Icons.delete_outline),
+                                  color: Theme.of(context).colorScheme.error,
+                                  onPressed: () => _deleteCsvFile(csvIndex),
+                                  tooltip: 'Excluir arquivo',
+                                ),
+                            ],
+                          ),
+                          onTap: () => _openCsvFile(csvFile),
+                        ),
+                      );
+                    }
                   },
                 ),
         ),
         floatingActionButton: FloatingActionButton(
-          onPressed: _addItem,
+          onPressed: _showAddOptions,
           child: const Icon(Icons.add),
         ),
       ),

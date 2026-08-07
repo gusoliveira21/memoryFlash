@@ -40,17 +40,21 @@ android {
     }
 
     signingConfigs {
-        create("release") {
-            keyAlias = keystoreProperties["keyAlias"] as String
-            keyPassword = keystoreProperties["keyPassword"] as String
-            storeFile = file(keystoreProperties["storeFile"] as String)
-            storePassword = keystoreProperties["storePassword"] as String
+        if (keystorePropertiesFile.exists()) {
+            create("release") {
+                keyAlias = keystoreProperties["keyAlias"] as String
+                keyPassword = keystoreProperties["keyPassword"] as String
+                storeFile = file(keystoreProperties["storeFile"] as String)
+                storePassword = keystoreProperties["storePassword"] as String
+            }
         }
     }
 
     buildTypes {
-        all {
-            signingConfig = signingConfigs.getByName("release")
+        getByName("release") {
+            if (keystorePropertiesFile.exists()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 }
@@ -63,52 +67,54 @@ flutter {
     source = "../.."
 }
 
-// Assina AABs automaticamente após o build
-afterEvaluate {
-    tasks.named("bundleDebug")?.configure {
-        doLast {
-            val aabFile = file("${project.buildDir}/outputs/bundle/debug/app-debug.aab")
-            if (aabFile.exists()) {
-                exec {
-                    commandLine(
-                        "jarsigner", "-verbose", "-sigalg", "SHA256withRSA", "-digestalg", "SHA-256",
-                        "-keystore", keystoreProperties["storeFile"] as String,
-                        "-storepass", keystoreProperties["storePassword"] as String,
-                        "-keypass", keystoreProperties["keyPassword"] as String,
-                        aabFile.absolutePath, keystoreProperties["keyAlias"] as String
-                    )
+// Assina AABs automaticamente após o build apenas se o keystore existir
+if (keystorePropertiesFile.exists()) {
+    afterEvaluate {
+        tasks.named("bundleDebug")?.configure {
+            doLast {
+                val aabFile = file("${project.buildDir}/outputs/bundle/debug/app-debug.aab")
+                if (aabFile.exists()) {
+                    exec {
+                        commandLine(
+                            "jarsigner", "-verbose", "-sigalg", "SHA256withRSA", "-digestalg", "SHA-256",
+                            "-keystore", keystoreProperties["storeFile"] as String,
+                            "-storepass", keystoreProperties["storePassword"] as String,
+                            "-keypass", keystoreProperties["keyPassword"] as String,
+                            aabFile.absolutePath, keystoreProperties["keyAlias"] as String
+                        )
+                    }
                 }
             }
         }
-    }
-    tasks.named("bundleRelease")?.configure {
-        doLast {
-            val aabFile = file("${project.buildDir}/outputs/bundle/release/app-release.aab")
-            if (aabFile.exists()) {
-                exec {
-                    commandLine(
-                        "jarsigner", "-verbose", "-sigalg", "SHA256withRSA", "-digestalg", "SHA-256",
-                        "-keystore", keystoreProperties["storeFile"] as String,
-                        "-storepass", keystoreProperties["storePassword"] as String,
-                        "-keypass", keystoreProperties["keyPassword"] as String,
-                        aabFile.absolutePath, keystoreProperties["keyAlias"] as String
-                    )
+        tasks.named("bundleRelease")?.configure {
+            doLast {
+                val aabFile = file("${project.buildDir}/outputs/bundle/release/app-release.aab")
+                if (aabFile.exists()) {
+                    exec {
+                        commandLine(
+                            "jarsigner", "-verbose", "-sigalg", "SHA256withRSA", "-digestalg", "SHA-256",
+                            "-keystore", keystoreProperties["storeFile"] as String,
+                            "-storepass", keystoreProperties["storePassword"] as String,
+                            "-keypass", keystoreProperties["keyPassword"] as String,
+                            aabFile.absolutePath, keystoreProperties["keyAlias"] as String
+                        )
+                    }
                 }
             }
         }
-    }
-    tasks.named("bundleProfile")?.configure {
-        doLast {
-            val aabFile = file("${project.buildDir}/outputs/bundle/profile/app-profile.aab")
-            if (aabFile.exists()) {
-                exec {
-                    commandLine(
-                        "jarsigner", "-verbose", "-sigalg", "SHA256withRSA", "-digestalg", "SHA-256",
-                        "-keystore", keystoreProperties["storeFile"] as String,
-                        "-storepass", keystoreProperties["storePassword"] as String,
-                        "-keypass", keystoreProperties["keyPassword"] as String,
-                        aabFile.absolutePath, keystoreProperties["keyAlias"] as String
-                    )
+        tasks.named("bundleProfile")?.configure {
+            doLast {
+                val aabFile = file("${project.buildDir}/outputs/bundle/profile/app-profile.aab")
+                if (aabFile.exists()) {
+                    exec {
+                        commandLine(
+                            "jarsigner", "-verbose", "-sigalg", "SHA256withRSA", "-digestalg", "SHA-256",
+                            "-keystore", keystoreProperties["storeFile"] as String,
+                            "-storepass", keystoreProperties["storePassword"] as String,
+                            "-keypass", keystoreProperties["keyPassword"] as String,
+                            aabFile.absolutePath, keystoreProperties["keyAlias"] as String
+                        )
+                    }
                 }
             }
         }
