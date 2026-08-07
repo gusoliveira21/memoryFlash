@@ -16,29 +16,32 @@ class FlashcardService {
         data = await file.readAsString();
       }
 
-      final List<String> lines = const LineSplitter().convert(data);
-
-      final List<Flashcard> flashcards = [];
-
-      for (final line in lines) {
-        if (line.trim().isEmpty) continue;
-
-        final List<String> parts = _parseCsvLine(line);
-
-        if (parts.length >= 2) {
-          flashcards.add(
-            Flashcard(question: parts[0].trim(), answer: parts[1].trim()),
-          );
-        }
-      }
-
-      return flashcards;
+      return parseFlashcardsFromText(data);
     } catch (e) {
       throw Exception('Erro ao carregar flashcards: $e');
     }
   }
 
-  static List<String> _parseCsvLine(String line) {
+  static List<Flashcard> parseFlashcardsFromText(String data) {
+    final List<String> lines = const LineSplitter().convert(data);
+    final List<Flashcard> flashcards = [];
+
+    for (final line in lines) {
+      if (line.trim().isEmpty) continue;
+
+      final List<String> parts = parseCsvLine(line);
+
+      if (parts.length >= 2) {
+        flashcards.add(
+          Flashcard(question: parts[0].trim(), answer: parts[1].trim()),
+        );
+      }
+    }
+
+    return flashcards;
+  }
+
+  static List<String> parseCsvLine(String line) {
     final List<String> result = [];
     String current = '';
     bool inQuotes = false;

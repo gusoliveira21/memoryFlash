@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path/path.dart' as path;
 import '../models/csv_file.dart';
+import '../models/deck.dart';
 import '../models/flashcard.dart';
 import '../services/flashcard_service.dart';
 
 class FlipCardScreen extends StatefulWidget {
-  final CsvFile csvFile;
+  final CsvFile? csvFile;
+  final Deck? deck;
 
-  const FlipCardScreen({super.key, required this.csvFile});
+  const FlipCardScreen({super.key, this.csvFile, this.deck})
+      : assert(csvFile != null || deck != null);
 
   @override
   State<FlipCardScreen> createState() => _FlipCardScreenState();
@@ -40,13 +43,20 @@ class _FlipCardScreenState extends State<FlipCardScreen>
 
   Future<void> _loadFlashcards() async {
     try {
-      final flashcards = await FlashcardService.loadFlashcardsFromFile(
-        widget.csvFile,
-      );
-      setState(() {
-        _flashcards = flashcards;
-        _isLoading = false;
-      });
+      if (widget.deck != null) {
+        setState(() {
+          _flashcards = widget.deck!.cards;
+          _isLoading = false;
+        });
+      } else if (widget.csvFile != null) {
+        final flashcards = await FlashcardService.loadFlashcardsFromFile(
+          widget.csvFile!,
+        );
+        setState(() {
+          _flashcards = flashcards;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
       setState(() {
         _error = e.toString();
@@ -131,7 +141,9 @@ class _FlipCardScreenState extends State<FlipCardScreen>
               crossAxisAlignment: CrossAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(path.basenameWithoutExtension(widget.csvFile.name)),
+                Text(widget.deck != null
+                    ? widget.deck!.name
+                    : path.basenameWithoutExtension(widget.csvFile!.name)),
                 if (!_isLoading && _flashcards.isNotEmpty)
                   Text(
                     '${_currentIndex + 1} / ${_flashcards.length}',
