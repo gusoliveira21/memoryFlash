@@ -59,6 +59,13 @@ jobs:
           keyPassword=${{ secrets.KEY_PASSWORD }}
           EOF
 
+      - name: Create .env file
+        run: |
+          cat > .env <<EOF
+          DISCORD_WEBHOOK_URL=${{ secrets.DISCORD_WEBHOOK_URL }}
+          GIST_RAW_URL=${{ secrets.GIST_RAW_URL }}
+          EOF
+
       - name: Build App Bundle
         run: flutter build appbundle --release --build-number=${{ github.run_number }}
 

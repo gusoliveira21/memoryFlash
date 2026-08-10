@@ -9,7 +9,6 @@ class ShouldShowFeedbackNotificationUseCase {
     final isFeatureEnabled = await repository.isFeedbackFeatureEnabled();
     final hasUserSeenIt = await repository.hasSeenNotification();
 
-    // Só exibe a notificação proativa se a feature existir E o usuário não tiver silenciado
     return isFeatureEnabled && !hasUserSeenIt;
   }
 }

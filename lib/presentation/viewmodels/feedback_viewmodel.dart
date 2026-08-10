@@ -43,7 +43,6 @@ class FeedbackViewModel extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<void> _init() async {
-    // Busca os dois status simultaneamente
     final results = await Future.wait([
       _getVisibilityUseCase(),
       _shouldShowAlertUseCase(),
