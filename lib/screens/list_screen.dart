@@ -41,8 +41,43 @@ class _ListScreenState extends State<ListScreen> {
     
     _feedbackViewModel = GetIt.instance<FeedbackViewModel>();
     _feedbackViewModel.addListener(() {
-      if (mounted) setState(() {});
+      if (mounted) {
+        setState(() {});
+        if (_feedbackViewModel.triggerProactiveAlert) {
+          _feedbackViewModel.markAlertAsSeen();
+          _showFeedbackDialog();
+        }
+      }
     });
+  }
+
+  void _showFeedbackDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Deixe sua Sugestão!'),
+        content: const Text(
+            'Estamos sempre buscando melhorar o Memory Flash. '
+            'Você gostaria de deixar um feedback ou sugestão agora?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Depois'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => const FeedbackScreen()),
+              );
+            },
+            child: const Text('Deixar Feedback'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
