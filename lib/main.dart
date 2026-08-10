@@ -3,9 +3,11 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'theme/app_theme.dart';
 import 'screens/list_screen.dart';
+import 'di/feedback_injection.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  setupFeedbackDI();
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   runApp(const ThemeLoaderApp());
 }
