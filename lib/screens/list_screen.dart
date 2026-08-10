@@ -11,6 +11,9 @@ import 'create_deck_screen.dart';
 import 'ai_prompt_screen.dart';
 import 'paste_csv_screen.dart';
 import 'flip_card_screen.dart';
+import 'feedback_screen.dart';
+import 'package:get_it/get_it.dart';
+import '../presentation/viewmodels/feedback_viewmodel.dart';
 
 class ListScreen extends StatefulWidget {
   const ListScreen({
@@ -29,11 +32,23 @@ class ListScreen extends StatefulWidget {
 class _ListScreenState extends State<ListScreen> {
   final List<CsvFile> _csvFiles = [];
   final List<Deck> _decks = [];
+  late FeedbackViewModel _feedbackViewModel;
 
   @override
   void initState() {
     super.initState();
     _loadCachedFiles();
+    
+    _feedbackViewModel = GetIt.instance<FeedbackViewModel>();
+    _feedbackViewModel.addListener(() {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _feedbackViewModel.dispose();
+    super.dispose();
   }
 
   Future<void> _loadCachedFiles() async {
@@ -408,8 +423,8 @@ class _ListScreenState extends State<ListScreen> {
     );
   }
 
-  List<PopupMenuEntry<ThemeMode>> _buildMenuItems() {
-    return [
+  List<PopupMenuEntry<dynamic>> _buildMenuItems() {
+    final items = <PopupMenuEntry<dynamic>>[
       PopupMenuItem<ThemeMode>(
         enabled: false,
         child: Row(
@@ -430,6 +445,25 @@ class _ListScreenState extends State<ListScreen> {
         ),
       ),
     ];
+
+    if (_feedbackViewModel.showFeedbackButton) {
+      items.add(const PopupMenuDivider());
+      items.add(
+        PopupMenuItem<String>(
+          value: 'feedback',
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.feedback_outlined),
+              const SizedBox(width: 16),
+              Text('Deixar uma Sugestão', style: Theme.of(context).textTheme.bodyLarge),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return items;
   }
 
   @override
@@ -447,10 +481,17 @@ class _ListScreenState extends State<ListScreen> {
         appBar: AppBar(
           title: const Text('Arquivos CSV'),
           actions: [
-            PopupMenuButton<ThemeMode>(
+            PopupMenuButton<dynamic>(
               icon: const Icon(Icons.menu),
               tooltip: 'Opções',
-              onSelected: (_) {},
+              onSelected: (value) {
+                if (value == 'feedback') {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const FeedbackScreen()),
+                  );
+                }
+              },
               itemBuilder: (context) => _buildMenuItems(),
             ),
           ],
