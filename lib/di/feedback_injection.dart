@@ -12,11 +12,9 @@ import '../presentation/viewmodels/feedback_viewmodel.dart';
 final getIt = GetIt.instance;
 
 void setupFeedbackDI() {
-  // 1. Data Sources (LazySingleton)
   getIt.registerLazySingleton<FeedbackRemoteDataSource>(() => FeedbackRemoteDataSource());
   getIt.registerLazySingleton<FeedbackLocalDataSource>(() => FeedbackLocalDataSource());
 
-  // 2. Repository (LazySingleton)
   getIt.registerLazySingleton<IFeedbackRepository>(
     () => FeedbackRepositoryImpl(
       remoteDataSource: getIt<FeedbackRemoteDataSource>(),
@@ -24,7 +22,6 @@ void setupFeedbackDI() {
     ),
   );
 
-  // 3. Use Cases (LazySingleton)
   getIt.registerLazySingleton<GetFeedbackVisibilityUseCase>(
     () => GetFeedbackVisibilityUseCase(getIt<IFeedbackRepository>()),
   );
@@ -38,9 +35,7 @@ void setupFeedbackDI() {
     () => SendFeedbackMessageUseCase(getIt<IFeedbackRepository>()),
   );
 
-  // 4. ViewModel (Factory)
-  getIt.registerFactory<FeedbackViewModel>(
-    () => FeedbackViewModel(
+  getIt.registerFactory<FeedbackViewModel>(() => FeedbackViewModel(
       getIt<GetFeedbackVisibilityUseCase>(),
       getIt<ShouldShowFeedbackNotificationUseCase>(),
       getIt<MarkFeedbackNotificationAsSeenUseCase>(),

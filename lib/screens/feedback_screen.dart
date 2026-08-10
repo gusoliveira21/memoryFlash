@@ -16,7 +16,6 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
   @override
   void initState() {
     super.initState();
-    // Obtém uma nova instância do ViewModel para esta tela (já que é Factory)
     _viewModel = GetIt.instance<FeedbackViewModel>();
   }
 
