@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   pull_request: #push
     branches:
-      - to_google_play
+      - developer
 
 jobs:
   test-google-play-connection:
