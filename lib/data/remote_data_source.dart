@@ -21,9 +21,11 @@ class FeedbackRemoteDataSource {
     }
   }
 
-  Future<bool> sendFeedback(String message) async {
+  Future<bool> sendFeedback(String message, {String? email}) async {
     try {
-      final formattedMessage = "[App: com.gusoliveira21.memoryflash] Sugestão:\n$message";
+      final emailInfo = (email != null && email.trim().isNotEmpty) ? email.trim() : "Não informado";
+      final formattedMessage = "[App: com.gusoliveira21.memoryflash] Sugestão:\n$message\n\nEmail para contato: $emailInfo";
+      
       final response = await http.post(
         Uri.parse(_discordWebhookUrl),
         headers: {'Content-Type': 'application/json'},
