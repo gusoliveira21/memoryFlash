@@ -60,11 +60,11 @@ class FeedbackViewModel extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
   }
 
-  Future<bool> submitFeedback(String message) async {
+  Future<bool> submitFeedback(String message, {String? email}) async {
     _isSending = true;
     notifyListeners();
 
-    final success = await _sendMessageUseCase(message);
+    final success = await _sendMessageUseCase(message, email: email);
 
     _isSending = false;
     notifyListeners();

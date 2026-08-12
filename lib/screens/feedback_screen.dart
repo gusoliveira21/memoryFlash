@@ -12,6 +12,7 @@ class FeedbackScreen extends StatefulWidget {
 class _FeedbackScreenState extends State<FeedbackScreen> {
   late FeedbackViewModel _viewModel;
   final TextEditingController _feedbackController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
 
   @override
   void initState() {
@@ -23,6 +24,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
   void dispose() {
     _viewModel.dispose();
     _feedbackController.dispose();
+    _emailController.dispose();
     super.dispose();
   }
 
@@ -30,7 +32,8 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
     final text = _feedbackController.text.trim();
     if (text.isEmpty) return;
 
-    final success = await _viewModel.submitFeedback(text);
+    final email = _emailController.text.trim();
+    final success = await _viewModel.submitFeedback(text, email: email.isEmpty ? null : email);
 
     if (!mounted) return;
 
@@ -64,6 +67,15 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
               const Text(
                 'Tem alguma ideia, encontrou um problema ou gostaria de ver algo novo no Memory Flash?',
                 style: TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(
+                  hintText: 'Seu e-mail (opcional)',
+                  border: OutlineInputBorder(),
+                ),
               ),
               const SizedBox(height: 16),
               Expanded(

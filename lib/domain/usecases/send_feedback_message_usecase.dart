@@ -5,7 +5,7 @@ class SendFeedbackMessageUseCase {
 
   SendFeedbackMessageUseCase(this.repository);
 
-  Future<bool> call(String message) async {
-    return await repository.submitFeedback(message);
+  Future<bool> call(String message, {String? email}) async {
+    return await repository.submitFeedback(message, email: email);
   }
 }

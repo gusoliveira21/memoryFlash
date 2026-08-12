@@ -5,8 +5,7 @@ abstract class IFeedbackRepository {
   Future<bool> isFeedbackFeatureEnabled();
   Future<bool> hasSeenNotification();
   Future<void> setSeenNotification(bool value);
-  Future<bool> submitFeedback(String message);
-}
+  Future<bool> submitFeedback(String message, {String? email});}
 
 class FeedbackRepositoryImpl implements IFeedbackRepository {
   final FeedbackRemoteDataSource remoteDataSource;
@@ -33,7 +32,7 @@ class FeedbackRepositoryImpl implements IFeedbackRepository {
   }
 
   @override
-  Future<bool> submitFeedback(String message) async {
-    return await remoteDataSource.sendFeedback(message);
+  Future<bool> submitFeedback(String message, {String? email}) async {
+    return await remoteDataSource.sendFeedback(message, email: email);
   }
 }
