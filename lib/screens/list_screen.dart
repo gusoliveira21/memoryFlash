@@ -14,6 +14,7 @@ import 'flip_card_screen.dart';
 import 'feedback_screen.dart';
 import 'package:get_it/get_it.dart';
 import '../presentation/viewmodels/feedback_viewmodel.dart';
+import '../services/app_update_service.dart';
 
 class ListScreen extends StatefulWidget {
   const ListScreen({
@@ -33,11 +34,14 @@ class _ListScreenState extends State<ListScreen> {
   final List<CsvFile> _csvFiles = [];
   final List<Deck> _decks = [];
   late FeedbackViewModel _feedbackViewModel;
+  bool _isUpdateAvailable = false;
+  bool _isUpdateCardDismissed = false;
 
   @override
   void initState() {
     super.initState();
     _loadCachedFiles();
+    _checkForAppUpdate();
     
     _feedbackViewModel = GetIt.instance<FeedbackViewModel>();
     _feedbackViewModel.addListener(() {
@@ -49,6 +53,15 @@ class _ListScreenState extends State<ListScreen> {
         }
       }
     });
+  }
+
+  Future<void> _checkForAppUpdate() async {
+    final hasUpdate = await AppUpdateService.isUpdateAvailable();
+    if (mounted && hasUpdate) {
+      setState(() {
+        _isUpdateAvailable = true;
+      });
+    }
   }
 
   void _showFeedbackDialog() {
@@ -501,6 +514,112 @@ class _ListScreenState extends State<ListScreen> {
     return items;
   }
 
+  Widget _buildUpdateNotificationCard() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      decoration: BoxDecoration(
+        color: colorScheme.primaryContainer,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: colorScheme.primary,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.system_update_rounded,
+                    color: colorScheme.onPrimary,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Nova versão disponível!',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: colorScheme.onPrimaryContainer,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Uma atualização do Memory Flash está disponível na Google Play Store.',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.onPrimaryContainer.withValues(alpha: 0.85),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close, size: 20),
+                  color: colorScheme.onPrimaryContainer.withValues(alpha: 0.6),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  tooltip: 'Fechar',
+                  onPressed: () {
+                    setState(() {
+                      _isUpdateCardDismissed = true;
+                    });
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _isUpdateCardDismissed = true;
+                    });
+                  },
+                  child: Text(
+                    'Depois',
+                    style: TextStyle(color: colorScheme.onPrimaryContainer),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                FilledButton.icon(
+                  onPressed: () => AppUpdateService.performUpdate(),
+                  icon: const Icon(Icons.download_rounded, size: 18),
+                  label: const Text('Atualizar'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: colorScheme.primary,
+                    foregroundColor: colorScheme.onPrimary,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final brightness = Theme.of(context).brightness;
@@ -532,78 +651,86 @@ class _ListScreenState extends State<ListScreen> {
           ],
         ),
         body: SafeArea(
-          child: _csvFiles.isEmpty && _decks.isEmpty
-              ? const Center(child: Text('Nenhum baralho encontrado'))
-              : ListView.builder(
-                  itemCount: _csvFiles.length + _decks.length,
-                  padding: EdgeInsets.fromLTRB(
-                    16,
-                    16,
-                    16,
-                    // Recuo manual para edge-to-edge (barra de navegação)
-                    16 + MediaQuery.of(context).padding.bottom,
-                  ),
-                  itemBuilder: (context, index) {
-                    if (index < _decks.length) {
-                      final deck = _decks[index];
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        child: ListTile(
-                          leading: const Icon(Icons.style),
-                          title: Text(
-                            deck.name,
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.edit_outlined),
-                                onPressed: () => _editDeck(deck),
-                                tooltip: 'Editar baralho',
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.delete_outline),
-                                color: Theme.of(context).colorScheme.error,
-                                onPressed: () => _deleteDeck(index),
-                                tooltip: 'Excluir baralho',
-                              ),
-                            ],
-                          ),
-                          onTap: () => _openDeck(deck),
+          child: Column(
+            children: [
+              if (_isUpdateAvailable && !_isUpdateCardDismissed)
+                _buildUpdateNotificationCard(),
+              Expanded(
+                child: _csvFiles.isEmpty && _decks.isEmpty
+                    ? const Center(child: Text('Nenhum baralho encontrado'))
+                    : ListView.builder(
+                        itemCount: _csvFiles.length + _decks.length,
+                        padding: EdgeInsets.fromLTRB(
+                          16,
+                          16,
+                          16,
+                          // Recuo manual para edge-to-edge (barra de navegação)
+                          16 + MediaQuery.of(context).padding.bottom,
                         ),
-                      );
-                    } else {
-                      final csvIndex = index - _decks.length;
-                      final csvFile = _csvFiles[csvIndex];
-                      final fileNameWithoutExtension = path
-                          .basenameWithoutExtension(csvFile.name);
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        child: ListTile(
-                          leading: const Icon(Icons.description),
-                          title: Text(
-                            fileNameWithoutExtension,
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (!csvFile.isAsset)
-                                IconButton(
-                                  icon: const Icon(Icons.delete_outline),
-                                  color: Theme.of(context).colorScheme.error,
-                                  onPressed: () => _deleteCsvFile(csvIndex),
-                                  tooltip: 'Excluir arquivo',
+                        itemBuilder: (context, index) {
+                          if (index < _decks.length) {
+                            final deck = _decks[index];
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              child: ListTile(
+                                leading: const Icon(Icons.style),
+                                title: Text(
+                                  deck.name,
+                                  style: Theme.of(context).textTheme.titleMedium,
                                 ),
-                            ],
-                          ),
-                          onTap: () => _openCsvFile(csvFile),
-                        ),
-                      );
-                    }
-                  },
-                ),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.edit_outlined),
+                                      onPressed: () => _editDeck(deck),
+                                      tooltip: 'Editar baralho',
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.delete_outline),
+                                      color: Theme.of(context).colorScheme.error,
+                                      onPressed: () => _deleteDeck(index),
+                                      tooltip: 'Excluir baralho',
+                                    ),
+                                  ],
+                                ),
+                                onTap: () => _openDeck(deck),
+                              ),
+                            );
+                          } else {
+                            final csvIndex = index - _decks.length;
+                            final csvFile = _csvFiles[csvIndex];
+                            final fileNameWithoutExtension = path
+                                .basenameWithoutExtension(csvFile.name);
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              child: ListTile(
+                                leading: const Icon(Icons.description),
+                                title: Text(
+                                  fileNameWithoutExtension,
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (!csvFile.isAsset)
+                                      IconButton(
+                                        icon: const Icon(Icons.delete_outline),
+                                        color: Theme.of(context).colorScheme.error,
+                                        onPressed: () => _deleteCsvFile(csvIndex),
+                                        tooltip: 'Excluir arquivo',
+                                      ),
+                                  ],
+                                ),
+                                onTap: () => _openCsvFile(csvFile),
+                              ),
+                            );
+                          }
+                        },
+                      ),
+              ),
+            ],
+          ),
         ),
         floatingActionButton: FloatingActionButton(
           onPressed: _showAddOptions,
